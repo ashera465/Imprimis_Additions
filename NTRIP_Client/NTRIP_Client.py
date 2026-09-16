@@ -66,8 +66,10 @@ class NTRIPClient:
             "Connection: close",
         ]
 
-        if self.username is not None and self.password is not None:
-            credentials = f"{self.username}:{self.password}"
+        if self.username is not None:
+
+            credentials = f"{self.username}:{self.password or ''}"
+
             encoded = base64.b64encode(
                 credentials.encode()
             ).decode()
