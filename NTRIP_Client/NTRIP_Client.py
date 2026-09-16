@@ -7,6 +7,8 @@ Note that to login for some mountpoints you may need a username and password.
 
 While the details are defined below, it is also possible to override them using CLARGS.
 
+The default caster is rtk2go.com, which is free. Note that a valid email must be used for the username.
+
 '''
 
 # ==============================
@@ -20,7 +22,7 @@ MOUNTPOINT = "Cubrundairy"
 USERNAME = "abrahama5-at-vcu-d-edu"
 PASSWORD = None
 
-OUTPUT_FILE = "out.txt"
+OUTPUT_FILE = "out.rtcm3"
 
 # ==============================
 
