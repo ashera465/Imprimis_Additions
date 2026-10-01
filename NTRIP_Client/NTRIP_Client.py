@@ -7,22 +7,17 @@ Note that to login for some mountpoints you may need a username and password.
 
 While the details are defined below, it is also possible to override them using CLARGS.
 
-The default caster is rtk.geodnet.com, which has a free trial. Note that authentication must be used.
+The default caster is rtk.geodnet.com, which requires authentication and NMEA GGA input for RTCM data.
 Also GEODNET Requires NMEA output for RTCM data.
 '''
 
-
-
-'''
-
-'''
 # ==============================
-# NTRIP CONFIGURATION
+# NTRIP AUTHENTICATION CONFIGURATION
 # ==============================
-
-CASTER = "rtk.geodnet.com"
-PORT = 2101
-MOUNTPOINT = "AUTO"
+                                #Default is:
+CASTER = "rtk.geodnet.com"      #rtk.geodnet.com
+PORT = 2101                     #2101
+MOUNTPOINT = "AUTO"             #AUTO
 
 USERNAME = "u"
 PASSWORD = ""
@@ -32,17 +27,17 @@ OUTPUT_FILE = ""
 
 # ==============================
 # TOPIC CONFIGURATION
-TOPIC_GPS_OUT = "/gps/fix"
+TOPIC_GPS_OUT = "/gps/fix"  #This is the topic for GPS output
 RATE = 1.0  #Sends GGA messages @ {RATE} Hz
 SOCKET_TIMEOUT = 10
 TOPIC_TIMEOUT = 10
 # ==============================
 
 #=================================
-# PORT CONFIG
+#GPS PORT CONFIG
 GPS_PORT = "/dev/ttyUSB0" #Check this 
+BAUD_RATE = 115200
 #==================================
-
 
 import socket
 import base64
@@ -50,8 +45,12 @@ import time
 import argparse
 from sensor_msgs.msg import NavSatFix
 
+import rclpy
+from rclpy.node import Node
+import serial
+
 #Define class header
-class NTRIPClient:
+class NTRIPClient(Node):
 
     def __init__(
         self,
@@ -62,6 +61,7 @@ class NTRIPClient:
         password=None,
         output_file=None,
     ):
+        
         self.caster = caster
         self.port = port
         self.mountpoint = mountpoint
@@ -77,6 +77,15 @@ class NTRIPClient:
                 RATE,
                 self.run()
             )
+        
+        #Define Port to connect to GPS device
+        self.serial_port = serial.Serial(
+            port=GPS_PORT,
+            baudrate=BAUD_RATE,
+            #Returns after 1 sec of no serial input
+            timeout=1
+        )
+
 
         
     #Subscribe to any necessary topics
