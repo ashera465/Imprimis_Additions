@@ -12,7 +12,11 @@ launch/ntrip.launch.py
 ntrip_client/__init__.py
 ntrip_client/ntrip_node.py
 ntrip_client/simulated_gps_node.py
+ntrip_client.egg-info/PKG-INFO
+ntrip_client.egg-info/SOURCES.txt
+ntrip_client.egg-info/dependency_links.txt
+ntrip_client.egg-info/entry_points.txt
+ntrip_client.egg-info/requires.txt
+ntrip_client.egg-info/top_level.txt
+ntrip_client.egg-info/zip-safe
 resource/ntrip_client
-test/test_copyright.py
-test/test_flake8.py
-test/test_pep257.py

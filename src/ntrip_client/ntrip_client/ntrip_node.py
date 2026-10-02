@@ -7,8 +7,8 @@ Note that to login for some mountpoints you may need a username and password.
 
 While the details are defined below, it is also possible to override them using CLARGS.
 
-The default caster is rtk.geodnet.com, which requires authentication and NMEA GGA input for RTCM data.
-Also GEODNET Requires NMEA output for RTCM data.
+GPS serial lines are forwarded to the caster without filtering. Configure the
+GPS to output GGA if the caster requires GGA input.
 '''
 
 # ==============================
@@ -25,27 +25,24 @@ PASSWORD = "f3aohr"
 OUTPUT_FILE = ""
 # ==============================
 # DEBUG CONFIG
-DEBUG = False
+DEBUG = True
 
 # ==============================
-# TOPIC CONFIGURATION
-TOPIC_GPS_OUT = "/gps/fix"  #This is the topic for GPS output
-RATE = 1.0  #Sends GGA messages @ {RATE} Hz
-SOCKET_TIMEOUT = 10
-TOPIC_TIMEOUT = 10
+# GPS/NTRIP CONFIGURATION
+RATE = 1.0  # Exchanges GPS data and correction data at this interval.
+SOCKET_TIMEOUT = 1
 # ==============================
 
 #=================================
 #GPS PORT CONFIG
-GPS_PORT = "/dev/ttyUSB0" #Check this 
-BAUD_RATE = 115200
+GPS_PORT = "/dev/ttyACM0" #Check this
+BAUD_RATE = 38400
 #==================================
 
 import socket
 import base64
-import time
 import argparse
-from sensor_msgs.msg import NavSatFix, NavSatStatus
+import select
 
 import rclpy
 from rclpy.node import Node
@@ -75,12 +72,10 @@ class NTRIPClient(Node):
 
         self.sock = None
         self.file = None
-        self.latest_fix = None
         self.serial_port = None
-        self._last_fix_warning = 0.0
-        self._last_connect_warning = 0.0
+        self.latest_gga = None
 
-        # Create timer. Will send GGA and receive RTCM at the specified rate.
+        # Create timer to receive RTCM corrections at the specified rate.
         self.gga_timer = self.create_timer(RATE, self.run)
 
         # Define port to connect to GPS device if available.
@@ -88,98 +83,16 @@ class NTRIPClient(Node):
             self.serial_port = serial.Serial(
                 port=GPS_PORT,
                 baudrate=BAUD_RATE,
-                timeout=1,
+                timeout=0.1,
             )
         except Exception as exc:
             self.get_logger().warning(
                 f"GPS serial port {GPS_PORT} unavailable: {exc}"
             )
 
-
-        
-    #Subscribe to any necessary topics
-    def subscribe(self):
-        try:
-            self.fix_sub = self.create_subscription(
-                NavSatFix,
-                TOPIC_GPS_OUT,
-                self.fix_callback,
-                10,
-            )
-            self.get_logger().info(f"Subscribed to {TOPIC_GPS_OUT}")
-        except Exception as e:
-            self.get_logger().error(f"Failed to subscribe to topic {TOPIC_GPS_OUT}: {e}")
-
-    #Callback function containing messages
-    def fix_callback(self, msg):
-        self.latest_fix = msg
-        if DEBUG:
-            self.get_logger().info(f"Fix callback: status={msg.status.status}, lat={msg.latitude}, lon={msg.longitude}")
-
-        if self.sock is None and self._build_gga() is not None:
-            self.get_logger().info("Valid GPS fix received; attempting NTRIP connection.")
-            try:
-                self.connect()
-            except Exception as exc:
-                self.get_logger().error(f"Unable to connect to NTRIP caster from fix callback: {exc}")
-
-
-    #Static method to check NMEA checksum
-    @staticmethod
-    def _nmea_checksum(sentence):
-        checksum = 0
-        for ch in sentence:
-            checksum ^= ord(ch)
-        return f"{checksum:02X}"
-
-    #Function to create GGA sentences
-    def _build_gga(self):
-
-        if self.latest_fix is None:
-            return None
-
-        status = getattr(self.latest_fix, "status", None)
-        status_value = getattr(status, "status", None)
-        if status is None or status_value is None:
-            return None
-
-        if status_value == NavSatStatus.STATUS_NO_FIX:
-            return None
-
-        latitude = float(self.latest_fix.latitude)
-        longitude = float(self.latest_fix.longitude)
-
-        if abs(latitude) > 90.0 or abs(longitude) > 180.0:
-            return None
-
-        lat_deg = int(abs(latitude))
-        lat_min = (abs(latitude) - lat_deg) * 60.0
-        lat_dir = "N" if latitude >= 0 else "S"
-
-        lon_deg = int(abs(longitude))
-        lon_min = (abs(longitude) - lon_deg) * 60.0
-        lon_dir = "E" if longitude >= 0 else "W"
-
-        utc_now = time.gmtime()
-        utc_time = time.strftime("%H%M%S", utc_now)
-
-        sentence = (
-            f"$GPGGA,{utc_time},"
-            f"{lat_deg:02d}{lat_min:07.4f},{lat_dir},"
-            f"{lon_deg:03d}{lon_min:07.4f},{lon_dir},"
-            "1,10,0.0,0.0,M,0.0,M,,"
-        )
-        checksum = self._nmea_checksum(sentence[1:])
-        return f"{sentence}*{checksum}\r\n"
-
-
     #Connects to NTRIP Caster and authenticates with provided credentials.
     def connect(self):
         if self.sock is not None:
-            return
-
-        if self.latest_fix is None:
-            self.get_logger().warn("Waiting for a valid GPS fix before connecting to NTRIP caster.")
             return
 
         self.get_logger().info(f"Connecting to {self.caster}:{self.port}...")
@@ -189,7 +102,6 @@ class NTRIPClient(Node):
             (self.caster, self.port),
             timeout=SOCKET_TIMEOUT
         )
-        self.sock.settimeout(SOCKET_TIMEOUT)
 
         # Build authentication header
         headers = [
@@ -261,11 +173,6 @@ class NTRIPClient(Node):
 
         self.get_logger().info("NTRIP connection established.")
 
-        # Open output file if requested
-        if self.output_file:
-            self.file = open(self.output_file, "ab")
-            self.get_logger().info(f"Saving RTCM data to: {self.output_file}")
-
         # The bytes after the HTTP header may already contain
         # the beginning of the RTCM stream.
         if remaining:
@@ -275,10 +182,14 @@ class NTRIPClient(Node):
     # Send RTCM corrections to the GPS serial port if available,
     # otherwise save them to file if configured.
     def process_data(self, data):
+
+        #Check if port available, then send
         if self.serial_port is not None:
             try:
                 self.serial_port.write(data)
                 self.serial_port.flush()
+                if DEBUG:
+                    self.get_logger().info(f"Sent RTCM bytes to GPS serial port: {len(data)}")
                 return
             except Exception as exc:
                 self.get_logger().warning(f"Failed to write RTCM data to GPS serial port: {exc}\n Defaulting to file output.")
@@ -286,13 +197,41 @@ class NTRIPClient(Node):
         if self.file:
             self.file.write(data)
             self.file.flush()
-    
-    #Function to run the NTRIP Client
-    #Sends NMEA GGA messages to caster, recieves RTCM Corrections
-    def run(self):
-        if self.latest_fix is None:
-            self.get_logger().info("Waiting for GPS fix before sending NMEA GGA.")
+
+    def _update_latest_gga(self):
+        """
+        Will read serial port and obtain GGA messages and set that as the latest GGA message
+        """
+
+        if self.serial_port is None:
             return
+
+        try:
+            while True:
+
+                #Read serial input
+                line = self.serial_port.readline()
+                if not line:
+                    break
+
+                sentence = line.decode("ascii", errors="ignore").strip()
+                sentence_id = sentence[1:].partition(",")[0] if sentence.startswith("$") else ""
+                
+                if sentence_id.endswith("GGA"):
+                    self.latest_gga = f"{sentence}\r\n"
+                else:
+                    if DEBUG:
+                        self.get_logger().warning(f"Invalid sentence: {sentence}")
+    
+
+                if not self.serial_port.in_waiting:
+                    break
+        except Exception as exc:
+            self.get_logger().warning(f"Failed to read GPS serial port: {exc}")
+    
+
+    def run(self):
+        """Forward GPS serial data to the caster and RTCM back to the GPS."""
 
         if self.sock is None:
             self.get_logger().info("No socket yet; trying to connect to NTRIP caster.")
@@ -303,26 +242,28 @@ class NTRIPClient(Node):
                 return
 
         try:
-            gga = self._build_gga()
-            if gga is None:
-                return
+            self._update_latest_gga()
 
-            self.sock.sendall(gga.encode())
+            if self.latest_gga is not None:
+                gga_data = self.latest_gga.encode("ascii")
+                self.sock.sendall(gga_data)
+                if DEBUG:
+                    self.get_logger().info(
+                        f"Sent latest GGA to NTRIP caster: {len(gga_data)} bytes"
+                    )
 
-            try:
-                data = self.sock.recv(4096)
+                try:
+                    data = self.sock.recv(4096)
+                except (BlockingIOError, socket.timeout):
+                    return
 
                 if not data:
                     self.get_logger().warn("Caster closed the connection.")
                     self.close()
                     return
 
-                
                 self.get_logger().info(f"Received RTCM bytes: {len(data)}")
                 self.process_data(data)
-
-            except socket.timeout:
-                pass
 
         except KeyboardInterrupt:
             self.get_logger().info("Stopping...")
@@ -366,7 +307,6 @@ def main(args=None):
         output_file=OUTPUT_FILE,
     )
 
-    client.subscribe()
     rclpy.spin(client)
 
     client.close()

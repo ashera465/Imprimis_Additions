@@ -6,6 +6,8 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+
+    #Note the simulation is deprecated.
     sim_arg = DeclareLaunchArgument(
         'sim',
         default_value='false',
