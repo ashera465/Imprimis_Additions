@@ -24,6 +24,8 @@ PASSWORD = "f3aohr"
 
 OUTPUT_FILE = ""
 # ==============================
+# DEBUG CONFIG
+DEBUG = False
 
 # ==============================
 # TOPIC CONFIGURATION
@@ -111,7 +113,8 @@ class NTRIPClient(Node):
     #Callback function containing messages
     def fix_callback(self, msg):
         self.latest_fix = msg
-        self.get_logger().info(f"Fix callback: status={msg.status.status}, lat={msg.latitude}, lon={msg.longitude}")
+        if DEBUG:
+            self.get_logger().info(f"Fix callback: status={msg.status.status}, lat={msg.latitude}, lon={msg.longitude}")
 
         if self.sock is None and self._build_gga() is not None:
             self.get_logger().info("Valid GPS fix received; attempting NTRIP connection.")
@@ -209,8 +212,9 @@ class NTRIPClient(Node):
 
         request = "\r\n".join(headers) + "\r\n\r\n"
 
-        self.get_logger().info("Sending NTRIP HTTP request.")
-        self.get_logger().info(request)
+        if DEBUG:
+            self.get_logger().info("Sending NTRIP HTTP request.")
+            self.get_logger().info(request)
 
         #Send Request to Caster
         self.sock.sendall(request.encode())
@@ -234,6 +238,7 @@ class NTRIPClient(Node):
 
         header, separator, remaining = response.partition(b"\r\n\r\n")
 
+        
         self.get_logger().info("Caster response:")
         self.get_logger().info("--------------------------------")
         self.get_logger().info(header.decode(errors="replace"))
@@ -312,6 +317,7 @@ class NTRIPClient(Node):
                     self.close()
                     return
 
+                
                 self.get_logger().info(f"Received RTCM bytes: {len(data)}")
                 self.process_data(data)
 
