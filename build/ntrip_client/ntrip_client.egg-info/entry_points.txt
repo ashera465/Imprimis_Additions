@@ -1,0 +1,2 @@
+[console_scripts]
+ntrip_node = ntrip_client.ntrip_node:main
