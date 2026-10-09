@@ -1,0 +1,27 @@
+[0.655s] Invoking command in '/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client': AMENT_PREFIX_PATH=/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/nmea_navsat_driver:${AMENT_PREFIX_PATH} DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/lib/python3.12/site-packages:/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/nmea_navsat_driver/src:/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/nmea_navsat_driver/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/build --no-deps symlink_data
+[0.825s] running develop
+[0.922s] running egg_info
+[0.923s] creating ntrip_client.egg-info
+[0.932s] writing ntrip_client.egg-info/PKG-INFO
+[0.932s] writing dependency_links to ntrip_client.egg-info/dependency_links.txt
+[0.932s] writing entry points to ntrip_client.egg-info/entry_points.txt
+[0.932s] writing requirements to ntrip_client.egg-info/requires.txt
+[0.932s] writing top-level names to ntrip_client.egg-info/top_level.txt
+[0.932s] writing manifest file 'ntrip_client.egg-info/SOURCES.txt'
+[0.953s] reading manifest file 'ntrip_client.egg-info/SOURCES.txt'
+[0.954s] writing manifest file 'ntrip_client.egg-info/SOURCES.txt'
+[0.965s] running build_ext
+[0.965s] Creating /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/lib/python3.12/site-packages/ntrip-client.egg-link (link to .)
+[0.965s] Installing ntrip_node script to /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/lib/ntrip_client
+[0.965s] Installing simulated_gps_node script to /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/lib/ntrip_client
+[0.965s] 
+[0.965s] Installed /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client
+[0.965s] running symlink_data
+[0.966s] creating /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ament_index
+[0.966s] creating /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ament_index/resource_index
+[0.966s] creating /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ament_index/resource_index/packages
+[0.966s] symbolically linking /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/resource/ntrip_client -> /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ament_index/resource_index/packages
+[0.966s] symbolically linking /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/package.xml -> /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ntrip_client
+[0.966s] creating /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ntrip_client/launch
+[0.966s] symbolically linking /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/launch/ntrip.launch.py -> /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/share/ntrip_client/launch
+[0.988s] Invoked command in '/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client' returned '0': AMENT_PREFIX_PATH=/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/nmea_navsat_driver:${AMENT_PREFIX_PATH} DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/ntrip_client/lib/python3.12/site-packages:/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/nmea_navsat_driver/src:/media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/install/nmea_navsat_driver/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /media/asher-abraham/42d2a8ed-c0c5-456c-b13f-3c6a4bcae065/home/asher/Asher/Test_WS/build/ntrip_client/build --no-deps symlink_data

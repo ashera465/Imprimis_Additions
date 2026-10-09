@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -35,6 +36,10 @@ def generate_launch_description():
             parameters=[
                 {
                     'show_map': LaunchConfiguration('show_map'),
+                    'sim': ParameterValue(
+                        LaunchConfiguration('sim'),
+                        value_type=bool,
+                    ),
                     'debug': True,
                     'caster': "rtk.geodnet.com" ,
                     'port': 2101,

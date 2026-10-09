@@ -22,4 +22,4 @@ sudo screen /dev/ttyACM0 38400  #Screen output on USB Port
 
 colcon build --symlink-install
 source ./install/setup.bash
-ros2 launch ntrip_client ntrip.launch.py 
+ros2 launch ntrip_client ntrip.launch.py sim:=true show_map:=true

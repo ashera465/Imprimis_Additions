@@ -49,6 +49,7 @@ import select
 import rclpy
 from rclpy.node import Node
 from nmea_msgs.msg import Sentence
+from std_msgs.msg import String
 import serial
 
 import ntrip_client.map_UI as GPS
@@ -80,6 +81,8 @@ class NTRIPClient(Node):
 
         self.declare_parameter('debug', DEBUG)
         self.declare_parameter('show_map', False)
+        self.declare_parameter('sim', False)
+
 
         # Get parameters
         self.caster = self.get_parameter('caster').value
@@ -97,18 +100,30 @@ class NTRIPClient(Node):
         self.debug = self.get_parameter('debug').value
         self.show_map = self.get_parameter('show_map').value
 
+        self.sim = self.get_parameter('sim').value
+
 
 
         self.sock = None
         self.file = None
         self.serial_port = None
         self.latest_gga = None
+
+
+        #Create publisher for NMEA sentences for navsatdriver
         self.gga_publisher = self.create_publisher(
             Sentence,
-            'nmea_sentence',
+            'nmea_sentences',
             10,
         )
 
+        if self.sim:
+            self.gga_subscription = self.create_subscription(
+                String,
+                '/gps/gga',
+                self._simulated_gga_callback,
+                10,
+            )
 
         self.gps_plotter = None
 
@@ -120,17 +135,21 @@ class NTRIPClient(Node):
         # Create timer to receive RTCM corrections at the specified rate.
         self.gga_timer = self.create_timer(RATE, self.run)
 
-        # Define port to connect to GPS device if available.
-        try:
-            self.serial_port = serial.Serial(
-                port=self.gps_port,
-                baudrate=self.baud_rate,
-                timeout=0.1,
-            )
-        except Exception as exc:
-            self.get_logger().warning(
-                f"GPS serial port {self.gps_port} unavailable: {exc}"
-            )
+        # Define port to connect to GPS device if available, otherwise SIM
+
+        if not self.sim:
+            try:
+                self.serial_port = serial.Serial(
+                    port=self.gps_port,
+                    baudrate=self.baud_rate,
+                    timeout=0.1,
+                )
+            except Exception as exc:
+                self.get_logger().warning(
+                    f"GPS serial port {self.gps_port} unavailable: {exc}"
+                )
+        else:
+            self.get_logger().info("Using simulated GGA messages from /gps/gga.")
 
     #Connects to NTRIP Caster and authenticates with provided credentials.
     def connect(self):
@@ -258,29 +277,41 @@ class NTRIPClient(Node):
 
                 #Indeitifies message type as GGA.
                 sentence = line.decode("ascii", errors="ignore").strip()
-                sentence_id = sentence[1:].partition(",")[0] if sentence.startswith("$") else ""
-                
-                if sentence_id.endswith("GGA"):
-                    self.latest_gga = f"{sentence}\r\n"
-
-                    gga_msg = Sentence()
-                    gga_msg.header.stamp = self.get_clock().now().to_msg()
-                    gga_msg.header.frame_id = 'gps'
-                    gga_msg.sentence = sentence
-                    self.gga_publisher.publish(gga_msg)
-
-                    if self.show_map and self.gps_plotter is not None: #Plot GPS Location
-                        self.gps_plotter.update_gga(sentence)
-                    
-                else:
-                    if DEBUG:
-                        self.get_logger().warning(f"Invalid sentence type: {sentence_id}")
+                self._process_gga_sentence(sentence)
     
 
                 if not self.serial_port.in_waiting:
                     break
         except Exception as exc:
             self.get_logger().error(f"Failed to read GPS serial port: {exc}")
+
+    def _simulated_gga_callback(self, msg):
+        self._process_gga_sentence(msg.data)
+
+    def _process_gga_sentence(self, sentence):
+        sentence = sentence.strip()
+        sentence_id = (
+            sentence[1:].partition(",")[0]
+            if sentence.startswith("$")
+            else ""
+        )
+        if not sentence_id.endswith("GGA"):
+            if DEBUG:
+                self.get_logger().warning(
+                    f"Ignoring non-GGA sentence: {sentence_id}"
+                )
+            return
+
+        self.latest_gga = f"{sentence}\r\n"
+
+        gga_msg = Sentence()
+        gga_msg.header.stamp = self.get_clock().now().to_msg()
+        gga_msg.header.frame_id = 'gps'
+        gga_msg.sentence = sentence
+        self.gga_publisher.publish(gga_msg)
+
+        if self.show_map and self.gps_plotter is not None:
+            self.gps_plotter.update_gga(sentence)
     
 
     def run(self):
