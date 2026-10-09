@@ -4,11 +4,14 @@
   <name>ntrip_client</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="asher-abraham@todo.todo">asher-abraham</maintainer>
+  <maintainer email="abrahama5@vcu.edu">asher-abraham</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
+  <depend>nmea_msgs</depend>
+  <depend>nmea_navsat_driver</depend> --Needed to make the ROS nodes
+  <depend>python3-flask</depend> -- Live GPS map
   <exec_depend>python3-serial</exec_depend>
 
   <test_depend>ament_copyright</test_depend>

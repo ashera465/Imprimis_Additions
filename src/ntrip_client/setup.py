@@ -24,7 +24,11 @@ setup(
         ),
     ],
 
-    install_requires=['setuptools'],
+        # Force inclusion of auxiliary modules if find_packages misses them
+    py_modules=[
+        'ntrip_client.login_params',
+    ],
+    
     zip_safe=True,
 
     maintainer='asher-abraham',
@@ -36,6 +40,8 @@ setup(
             'pytest',
         ],
     },
+    install_requires=['setuptools', 'flask'],
+    
     entry_points={
         # Alias = executable path
         'console_scripts': [

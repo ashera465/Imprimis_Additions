@@ -11,6 +11,8 @@ GPS serial lines are forwarded to the caster without filtering. Configure the
 GPS to output GGA if the caster requires GGA input.
 '''
 
+from ntrip_client.login_params import USERNAME_AUTH, PASSWORD_AUTH  #This stores credentials. Github doesn't like it when I upload 'secrets'
+
 # ==============================
 # NTRIP AUTHENTICATION CONFIGURATION
 # ==============================
@@ -19,13 +21,13 @@ CASTER = "rtk.geodnet.com"      #rtk.geodnet.com
 PORT = 2101                     #2101
 MOUNTPOINT = "AUTO"             #AUTO
 
-USERNAME = "abrahama5@vcu.edu"
-PASSWORD = "f3aohr"
+USERNAME = USERNAME_AUTH
+PASSWORD = PASSWORD_AUTH
 
 OUTPUT_FILE = ""
 # ==============================
 # DEBUG CONFIG
-DEBUG = True
+DEBUG = False
 
 # ==============================
 # GPS/NTRIP CONFIGURATION
@@ -46,34 +48,74 @@ import select
 
 import rclpy
 from rclpy.node import Node
+from nmea_msgs.msg import Sentence
 import serial
+
+import ntrip_client.map_UI as GPS
 
 #Define class header
 class NTRIPClient(Node):
 
     def __init__(
-        self,
-        caster=None,
-        port=None,
-        mountpoint=None,
-        username=None,
-        password=None,
-        output_file=None,
+        self
     ):
         
         super().__init__('ntrip_client')
 
-        self.caster = caster
-        self.port = port
-        self.mountpoint = mountpoint
-        self.username = username
-        self.password = password
-        self.output_file = output_file
+                # ==============================
+        # ROS PARAMETERS
+        # ==============================
+
+        self.declare_parameter('caster', CASTER)
+        self.declare_parameter('port', PORT)
+        self.declare_parameter('mountpoint', MOUNTPOINT)
+        self.declare_parameter('username', USERNAME)
+        self.declare_parameter('password', PASSWORD)
+
+        self.declare_parameter('gps_port', GPS_PORT)
+        self.declare_parameter('baud_rate', BAUD_RATE)
+
+        self.declare_parameter('rate', RATE)
+        self.declare_parameter('socket_timeout', SOCKET_TIMEOUT)
+
+        self.declare_parameter('debug', DEBUG)
+        self.declare_parameter('show_map', False)
+
+        # Get parameters
+        self.caster = self.get_parameter('caster').value
+        self.port = self.get_parameter('port').value
+        self.mountpoint = self.get_parameter('mountpoint').value
+        self.username = self.get_parameter('username').value
+        self.password = self.get_parameter('password').value
+
+        self.gps_port = self.get_parameter('gps_port').value
+        self.baud_rate = self.get_parameter('baud_rate').value
+
+        self.rate = self.get_parameter('rate').value
+        self.socket_timeout = self.get_parameter('socket_timeout').value
+
+        self.debug = self.get_parameter('debug').value
+        self.show_map = self.get_parameter('show_map').value
+
+
 
         self.sock = None
         self.file = None
         self.serial_port = None
         self.latest_gga = None
+        self.gga_publisher = self.create_publisher(
+            Sentence,
+            'nmea_sentence',
+            10,
+        )
+
+
+        self.gps_plotter = None
+
+        #If map enabled, will create and start a GPS plotter
+        if self.show_map:
+            self.gps_plotter = GPS.GPSPlotter()
+            self.gps_plotter.start()
 
         # Create timer to receive RTCM corrections at the specified rate.
         self.gga_timer = self.create_timer(RATE, self.run)
@@ -81,13 +123,13 @@ class NTRIPClient(Node):
         # Define port to connect to GPS device if available.
         try:
             self.serial_port = serial.Serial(
-                port=GPS_PORT,
-                baudrate=BAUD_RATE,
+                port=self.gps_port,
+                baudrate=self.baud_rate,
                 timeout=0.1,
             )
         except Exception as exc:
             self.get_logger().warning(
-                f"GPS serial port {GPS_PORT} unavailable: {exc}"
+                f"GPS serial port {self.gps_port} unavailable: {exc}"
             )
 
     #Connects to NTRIP Caster and authenticates with provided credentials.
@@ -189,10 +231,10 @@ class NTRIPClient(Node):
                 self.serial_port.write(data)
                 self.serial_port.flush()
                 if DEBUG:
-                    self.get_logger().info(f"Sent RTCM bytes to GPS serial port: {len(data)}")
+                    self.get_logger().info(f"[IMPORTANT] Sent RTCM bytes to GPS serial port: {len(data)}")
                 return
             except Exception as exc:
-                self.get_logger().warning(f"Failed to write RTCM data to GPS serial port: {exc}\n Defaulting to file output.")
+                self.get_logger().warning(f"Failed to write RTCM data to GPS serial port: {exc}\n Bruh.")
 
         if self.file:
             self.file.write(data)
@@ -214,25 +256,39 @@ class NTRIPClient(Node):
                 if not line:
                     break
 
+                #Indeitifies message type as GGA.
                 sentence = line.decode("ascii", errors="ignore").strip()
                 sentence_id = sentence[1:].partition(",")[0] if sentence.startswith("$") else ""
                 
                 if sentence_id.endswith("GGA"):
                     self.latest_gga = f"{sentence}\r\n"
+
+                    gga_msg = Sentence()
+                    gga_msg.header.stamp = self.get_clock().now().to_msg()
+                    gga_msg.header.frame_id = 'gps'
+                    gga_msg.sentence = sentence
+                    self.gga_publisher.publish(gga_msg)
+
+                    if self.show_map and self.gps_plotter is not None: #Plot GPS Location
+                        self.gps_plotter.update_gga(sentence)
+                    
                 else:
                     if DEBUG:
-                        self.get_logger().warning(f"Invalid sentence: {sentence}")
+                        self.get_logger().warning(f"Invalid sentence type: {sentence_id}")
     
 
                 if not self.serial_port.in_waiting:
                     break
         except Exception as exc:
-            self.get_logger().warning(f"Failed to read GPS serial port: {exc}")
+            self.get_logger().error(f"Failed to read GPS serial port: {exc}")
     
 
     def run(self):
         """Forward GPS serial data to the caster and RTCM back to the GPS."""
 
+        self._update_latest_gga()
+
+        #Connect if not currecntly connected to client
         if self.sock is None:
             self.get_logger().info("No socket yet; trying to connect to NTRIP caster.")
             try:
@@ -242,9 +298,11 @@ class NTRIPClient(Node):
                 return
 
         try:
-            self._update_latest_gga()
-
             if self.latest_gga is not None:
+
+                #Run ext functions for showing GPS location
+                #
+
                 gga_data = self.latest_gga.encode("ascii")
                 self.sock.sendall(gga_data)
                 if DEBUG:
@@ -252,6 +310,8 @@ class NTRIPClient(Node):
                         f"Sent latest GGA to NTRIP caster: {len(gga_data)} bytes"
                     )
 
+
+                #Read returned RTCM data. If valid, forward to GPS.
                 try:
                     data = self.sock.recv(4096)
                 except (BlockingIOError, socket.timeout):
@@ -298,14 +358,8 @@ class NTRIPClient(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    client = NTRIPClient(
-        caster=CASTER,
-        port=PORT,
-        mountpoint=MOUNTPOINT,
-        username=USERNAME,
-        password=PASSWORD,
-        output_file=OUTPUT_FILE,
-    )
+    client = NTRIPClient()
+
 
     rclpy.spin(client)
 

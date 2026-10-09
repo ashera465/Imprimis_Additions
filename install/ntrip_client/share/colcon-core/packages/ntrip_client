@@ -1,1 +1,1 @@
-rclpy:sensor_msgs
+nmea_navsat_driver:python3-flask:python3-serial:rclpy:sensor_msgs

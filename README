@@ -1,6 +1,25 @@
-colcon-install --symlink-install
+#Copy paste commands type shi
+
+colcon build --symlink-install  #Build with symoblic link
+
+rm -rf build/ install/ log/  #Delete build
+
+source ./install/setup.bash #Source env vars
+ros2 launch ntrip_client ntrip.launch.py  #Launch
+
+#cd into src
+ros2 pkg create --build-type ament_python --node-name my_node my_py_pkg --dependencies rclpy
+
+
+rosdep install --from-paths src --ignore-src -r -y
+
+sudo dmesg | grep -E "tty|USB"  #Check USB Ports
+ls /dev/ttyUSB* /dev/ttyACM*
+
+sudo screen /dev/ttyACM0 38400  #Screen output on USB Port
+
+
+
+colcon build --symlink-install
 source ./install/setup.bash
 ros2 launch ntrip_client ntrip.launch.py 
-
-
-sudo dmesg | grep -E "tty|USB"
