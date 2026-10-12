@@ -28,7 +28,7 @@ source install/setup.bash
 ## 3. Launch the NTRIP Client
 
 ```bash
-ros2 launch ntrip_client ntrip.launch.py
+ros2 launch ntrip_client ntrip.launch.py 
 ```
 
 **Requirements:**
