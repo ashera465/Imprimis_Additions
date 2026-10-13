@@ -125,16 +125,6 @@ class NTRIPClient(Node):
                 10,
             )
 
-        self.gps_plotter = None
-
-        #If map enabled, will create and start a GPS plotter
-        if self.show_map:
-            self.gps_plotter = GPS.GPSPlotter()
-            self.gps_plotter.start()
-
-        # Create timer to receive RTCM corrections at the specified rate.
-        self.gga_timer = self.create_timer(RATE, self.run)
-
         # Define port to connect to GPS device if available, otherwise SIM
 
         if not self.sim:
@@ -150,6 +140,17 @@ class NTRIPClient(Node):
                 )
         else:
             self.get_logger().info("Using simulated GGA messages from /gps/gga.")
+
+        
+        self.gps_plotter = None
+
+        #If map enabled, will create and start a GPS plotter
+        if self.show_map:
+            self.gps_plotter = GPS.GPSPlotter()
+            self.gps_plotter.start()
+
+        # Create timer to receive RTCM corrections at the specified rate.
+        self.gga_timer = self.create_timer(RATE, self.run)
 
     #Connects to NTRIP Caster and authenticates with provided credentials.
     def connect(self):
@@ -310,6 +311,7 @@ class NTRIPClient(Node):
         gga_msg.sentence = sentence
         self.gga_publisher.publish(gga_msg)
 
+        #Send info to plotter if enabled.
         if self.show_map and self.gps_plotter is not None:
             self.gps_plotter.update_gga(sentence)
     
