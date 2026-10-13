@@ -29,6 +29,9 @@ source install/setup.bash
 
 ```bash
 ros2 launch ntrip_client ntrip.launch.py 
+
+#Note that a live map can also be launched with the following
+ros2 launch ntrip_client ntrip.launch.py show_map:=true
 ```
 
 **Requirements:**
@@ -47,27 +50,13 @@ colcon build --symlink-install
 # Source the workspace environment
 source install/setup.bash
 
-# Launch in simulation mode with the map enabled
-ros2 launch ntrip_client ntrip.launch.py sim:=true show_map:=true
+# Launch in simulation mode 
+ros2 launch ntrip_client ntrip.launch.py sim:=true 
 ```
 
 **Note:** Valid NTRIP caster credentials are still required when connecting to a protected caster. Simulation behavior depends on the launch configuration.
 
-## 5. Create a New ROS 2 Python Package
-
-Create an `ament_python` package with a starter node and the `rclpy` dependency:
-
-```bash
-ros2 pkg create \
-    --build-type ament_python \
-    --node-name my_node \
-    my_py_pkg \
-    --dependencies rclpy
-```
-
-Replace `my_py_pkg` and `my_node` with your desired package and node names.
-
-## 6. Check USB Serial Ports (Linux)
+## 5. Check USB Serial Ports (Linux)
 
 Identify connected USB serial devices:
 

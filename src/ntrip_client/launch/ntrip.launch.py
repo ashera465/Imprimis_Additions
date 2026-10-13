@@ -15,6 +15,7 @@ def generate_launch_description():
         description='Launch the simulated GPS publisher as well as the NTRIP client.',
     )
 
+    #Launches a map showing live position of fixed GPS GGA data.
     show_map_arg = DeclareLaunchArgument(
         'show_map',
         default_value='false',
